@@ -2,10 +2,8 @@
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args)==0L)stop("STOP! Please supply an argument.")
 
-### packages 
-library(here)
-library(tidyverse)
-library(fs)
+if(!requireNamespace("pacman"))install.packages("pacman")
+pacman::p_load(tictoc, tidyverse, gridExtra, furrr, fs, here)
 
 ### specify simulation conditions 
 # different number of layers 
