@@ -39,7 +39,7 @@ QNAME = $(PROJECT) $(notdir $@)
 QFLAGS = -d $(CURDIR) -q $(QUEUE) -l nodes=1:ppn=$(NCORES) -l walltime=$(WALLTIME) -l mem=$(MEMORY) -N "$(QNAME)"
 
 ### Automatic Options ###
-PROJECT := $(strip $(notdir $(CURDIR)))# CURDIR is the place where make is executed
+PROJECT := exampletasks# CURDIR is the place where make is executed
 UID = $(shell id -u)
 
 ifeq ($(DOCKER),TRUE)
