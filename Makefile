@@ -1,6 +1,7 @@
 ### Execution Environment
 DOCKER=FALSE
 SINGULARITY=FALSE
+# on Cluster: SINGULARITY=TRUE
 TORQUE=FALSE
 ### Location of Files ###
 # A directory with one file per tasks that specifies the execution of OUTSCRIPT
@@ -18,6 +19,7 @@ OUTSUFFIX = .rds
 ### Generall Computation Options ###
 # Tasks is the first level of parallelisation
 NTASKS = 4
+# on Cluster: try e.g. NTASKS=20 or NTASKS=400
 # Cores is the second level of parallelisation which OUTSCRIPT may utilise
 NCORES = 1
 
@@ -33,9 +35,12 @@ SHOME = /home/rstudio
 
 ### qsub Options ###
 WALLTIME = 0:07:00
+# on Cluster: e.g WALLTIME=02:00:00 or WALLTIME=00:05:00
 MEMORY = 650mb
+# on Cluster: e.g. MEMORY=300mb 
 QUEUE = default
 QNAME = $(PROJECT) $(notdir $@)
+# on Cluster: change to e.g. QNAME=ariha
 QFLAGS = -d $(CURDIR) -q $(QUEUE) -l nodes=1:ppn=$(NCORES) -l walltime=$(WALLTIME) -l mem=$(MEMORY) -N "$(QNAME)"
 
 ### Automatic Options ###
