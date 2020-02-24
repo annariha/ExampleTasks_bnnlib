@@ -1,0 +1,7 @@
+bnnlib/
+data/
+.Rhistory
+.RData
+.Rproj.user
+*.html
+*.pdf

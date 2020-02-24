@@ -1,0 +1,156 @@
+---
+title: "bnnlib_tasks"
+author: "Anna Elisabeth Riha"
+date: "1/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+How could the structure of a task look like that gets gradually more complex and leads to a growing network to enable sufficiently good results? 
+
+# Ideas for a gradually more complex task
+
+1. learning to distinguish two frequencies, then learning to distinguish a third one
+
+2. learning to 
+
+3. learning sequences of numbers 1 & 8, then add 7 or another number
+
+# Realization 
+
+gradually more complex = after solving a first level, learn a more difficult second level of the same task etc.
+
+growing new structure = more and new connections between already existing neurons/cells
+
+solving a level of a task = obtaining a low enough mse 
+
+if test mse < somethreshold{
+task <- nextleveltask 
+network <- biggernetwork 
+}
+
+am Bsp. poet oder frequency 
+
+# Components in bnnlib
+
+## Architecture & Nodes
+
+#### Expansion: How to create a network that is bigger than used cells? 
+
+Architecture.h 
+
+- network
+- trainer
+- dataset 
+
+DelayedSecondOrderArchitecture.h
+
+#### Refinement: How to select certain connections and "delete" others? 
+
+Ideas from Paper: 
+turn off certain connections & test performance -> "leave-one-out"
+no new data, create noise & find robust neurons and connections
+
+## Which training algorithms from bnnlib might be suitable? 
+
+For the frequency prediction task, 
+
+back-propagation 
+
+LSTM-cells
+
+# Questions
+
+LSTM CEC nodes? 
+
+# Example: learn two frequencies, then three
+
+## Setup
+
+First, we load the shared library, some packages, and extra R code.
+
+```{r fireup, echo=TRUE}
+
+dyn.load(paste("../bnnlib", .Platform$dynlib.ext, sep=""))
+source("../bnnlib.R")
+cacheMetaData(1)
+
+library(gridExtra)
+
+source("../R/toSequence.R")
+```
+
+## Generate Data
+
+Data from an oscillator switching between different frequencies will serve as an example. The switches occur randomly at a chance of 1% (and a switch may choose the identical frequency). At first, the network learns to distinguish two frequencies. If this task is solved with sufficient accuracy, the tasks gets gradually more complex by asking to learn three different sequences. 
+
+We generate multiple sequences each with a length of 1000.
+
+showing new data (i.e. simulating data with two frequencies, then with three) 
+OR 
+asking a new question (i.e. simulate data with three or four frequencies, then first learn two, then three) 
+
+```{r generate}
+set.seed(123535)
+
+# generate 4 different frequencies from start
+# simulate frequency data
+freqs = c(50, 77, 91, 100)
+
+# 4 sequences with length 1000
+sim.frequencies <- function(freqs, ts.len = 1000, num.seqs = 4) {
+  seqset <- SequenceSet() 
+  num.freqs <- length(freqs)
+  for (j in 1:num.seqs) {
+    x <- 1:ts.len
+    y<-rep(NA, ts.len)
+    truth <- matrix(0, nrow=ts.len, ncol=length(freqs))
+    freq <- sample(freqs,1)
+    for (i in 1:ts.len) {
+      y[i] <- sin(x[i]*freq)
+      # switches occur randomly at a chance of 1%
+      if (runif(1)>.99) {
+        freq <- sample(freqs,1)
+      }
+      truth[i, which(freqs==freq)] <- 1
+    }
+    seqdf <- data.frame(y, truth)
+    seq <- toSequence(seqdf, 1, 2:(1+num.freqs))
+    SequenceSet_add_copy_of_sequence(seqset, seq)
+  }
+  return(seqset)
+}
+
+# define a sequence set and test set 
+seqset <- sim.frequencies(freqs, num.seqs = 8)
+testset <- sim.frequencies(freqs)
+```
+
+## Create a Network Structure that allows for Expansion
+
+```{r network}
+in_size <- 2 #two inputs 
+out_size <- length(freqs) #out_size depends on the task
+TANH_NODE = 1 #tan-hyperbolicus node 
+#hid_size = 20
+#network = LSTMNetwork(in_size,hid_size,out_size)
+
+network2 = NetworkFactory_createRecurrentWTANetwork(in_size=in_size, 
+                                                   hid_type=TANH_NODE, 
+                                                   num_layers=2,
+                                                   layer_sizes=c(8,8),  
+                                                   out_size=out_size);
+
+network8 = NetworkFactory_createRecurrentWTANetwork(in_size=in_size, 
+                                                   hid_type=TANH_NODE, 
+                                                   num_layers=8,
+                                                   layer_sizes=c(8,8),  
+                                                   out_size=out_size);
+```
+
+NetworkFactory: 
+
+ensembles/WinnerTakesAllEnsemble.h
