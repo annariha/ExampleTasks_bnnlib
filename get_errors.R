@@ -1,6 +1,7 @@
 ### function for getting errors of the different networks over iterations and settings 
 
 get_errors <- function(freqs, layers, cells, iteration, in_size=1, TANH_NODE=1, out_size=length(freqs), iter=c(500), ...) {
+
   dots <- list(...) # allows for adding of additional arguments 
   if(length(dots)>0) warning("Something seems odd.")
   
@@ -32,12 +33,13 @@ get_errors <- function(freqs, layers, cells, iteration, in_size=1, TANH_NODE=1, 
   train_value <- .Call('R_swig_toValue', train_x, package="bnnlib") 
   
   # test error 
-  # ...
+  test_int <-  Network_evaluate_error(network, testset)
+  # müsste ein integer sein 
   
   # store evaluation 
   trainerror <- cbind(unlist(train_value))
   # testerror <- ...
   out <- list(trainerror = data.frame(iter = seq_along(trainerror), trainerror = trainerror), 
-              testerror = NA)
+              testerror = test_int)
   return(out)
 }
