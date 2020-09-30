@@ -7,11 +7,11 @@ TORQUE=FALSE
 # A directory with one file per tasks that specifies the execution of OUTSCRIPT
 INDIR = data/conditions
 # A script that fills INDIR
-INSCRIPT = settings.R
+INSCRIPT = sim_gen_settings.R
 # A directory that contains one corresponding file in OUTDIR per file in INDIR
 OUTDIR = data/results
 # A script that uses specifications from INDIR to generate results
-OUTSCRIPT = running_simulation.R
+OUTSCRIPT = sim_run_sim.R
 # The used file extension for files in INDIR/OUTDIR
 INSUFFIX = .rds
 OUTSUFFIX = .rds
