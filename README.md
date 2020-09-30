@@ -1,6 +1,6 @@
 # simulation_freq_bnnlib
 
-This repository contains R-code for running a simulation study on a Tardis Cluster and was developed as part of my work as a student assistant for Andreas Brandmaier in cooperation with Aaron Peikert at MPIB (Max-Planck Institute of Human Development) in Berlin.
+This repository contains R-code for running a simulation study on a Tardis Cluster and was developed as part of my work as a student assistant for Andreas Brandmaier in cooperation with Aaron Peikert @aaronpeikert at MPIB (Max-Planck Institute of Human Development) in Berlin.
 
 `bnnlib` is a R-package (under development) by Andreas Brandmaier that allows the flexible creation of different neural network models in R. 
 
