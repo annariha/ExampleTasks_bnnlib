@@ -16,8 +16,8 @@ cacheMetaData(1)
 source(here("bnnlib", "R", "toSequence.R"))
 
 # load functions for simulation 
-source(here("gen_frequencies.R"))
-source(here("get_errors.R"))
+source(here("sim_gen_frequencies.R"))
+source(here("sim_get_errors.R"))
 
 #----workhorse----
 conditions <- sample_n(conditions, 2)
