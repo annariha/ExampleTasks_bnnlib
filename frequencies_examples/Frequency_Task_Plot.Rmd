@@ -1,0 +1,247 @@
+---
+title: "Frequency Task Plot"
+author: "Anna Elisabeth Riha"
+date: "2/3/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+```{r fireup, echo=TRUE}
+dyn.load(here("bnnlib_alt", str_c("bnnlib", .Platform$dynlib.ext)))
+source(here("bnnlib_alt", "bnnlib.R"))
+cacheMetaData(1)
+
+library(gridExtra)
+source("../R/toSequence.R")
+source("../R/plotPredictions.R")
+
+library(tidyverse)
+library(ggplot2)
+```
+
+## Generate Frequency Data
+
+For the following example, we first generate a dataset containing four different frequencies. The recurrent network will learn to distinguish between those frequencies. 
+
+```{r generate}
+set.seed(123535)
+
+# simulate frequency data, four different frequencies 
+freqs = c(50, 77, 91, 100)
+
+# function that simulates frequencies 
+sim.frequencies <- function(freqs, ts.len = 1000, num.seqs = 4) {
+ seqset <- SequenceSet() 
+ num.freqs <- length(freqs)
+ for (j in 1:num.seqs) {
+    x <- 1:ts.len
+    y<-rep(NA, ts.len)
+    truth <- matrix(0, nrow=ts.len, ncol=length(freqs))
+    freq <- sample(freqs,1)
+    for (i in 1:ts.len) {
+      y[i] <- sin(x[i]*freq)
+      if (runif(1)>.99) {
+        freq <- sample(freqs,1)
+      }
+      truth[i, which(freqs==freq)] <- 1
+    }
+    seqdf <- data.frame(y, truth)
+    seq <- toSequence(seqdf, 1, 2:(1+num.freqs))
+    SequenceSet_add_copy_of_sequence(seqset, seq)
+  }
+  return(seqset)
+}
+
+seqset <- sim.frequencies(freqs, num.seqs = 8)
+testset <- sim.frequencies(freqs)
+```
+
+## Recurrent Network in Wide Setup
+
+Using a recurrent network with 8 cells per layer, different number of layers and layer sizes are compared. This can be considered a wide setup as the number of cells per layer is high and the number of layers is considerably low. 
+
+```{r network}
+# in_size <- 2
+# Warning: Sequence input size does not match network size!
+in_size <- 1
+out_size <- length(freqs)
+TANH_NODE <- 1
+# iterations in training of network 
+iter = c(500)
+# try 1, 2, 3, 4 layers 
+nr_layers <- c(1, 2, 3, 4)
+
+# initialize lists 
+networks = list() 
+trainers = list()
+values = list()
+xs = list()
+
+# empty df with nr of rows = nr_layers x length(values) 
+plotdat = data.frame(matrix(NA, nrow = iter[1]*length(nr_layers), ncol = 3))
+colnames(plotdat) = c("condition", "x", "y")
+plotdat$x <- rep(seq(1:iter[1]), length(nr_layers))
+
+for (i in seq_len(NROW(nr_layers))) {
+  networks[[i]] = NetworkFactory_createRecurrentWTANetwork(in_size=in_size,
+                                                        hid_type=TANH_NODE,
+                                                        num_layers=nr_layers[i],
+                                                        layer_sizes=rep(8,nr_layers[i]),
+                                                        out_size=out_size);
+  # initialize trainers and set learning rate 
+  trainers[[i]] = ImprovedRPropTrainer(networks[[i]]);
+  Trainer_learning_rate_set(self = trainers[[i]], s_learning_rate = 0.0001 )
+  
+  # train the networks 
+  Trainer_train2(trainers[[i]], seqset, iterations = iter[1])
+  setClass('_p_ImprovedRPropTrainer', contains=c('ExternalReference','_p_Trainer'))
+  Trainer_add_abort_criterion__SWIG_0(self = trainers[[i]], 
+                                      ConvergenceCriterion(0.01), 
+                                      steps=10)
+  
+  # create dfs to plot training error lateron 
+  xs[[i]] <- Trainer_error_train_get(trainers[[i]])
+  # vector of length 500
+	values[[i]] <- .Call('R_swig_toValue', xs[[i]], package="bnnlib") 
+	# groups with different conditions  
+	plotdat$condition[((i*iter[1] + 1)-iter[1]):(i*iter[1])] <-
+	  rep(seq_len(NROW(nr_layers))[i], iter[1])
+	plotdat$numlayers[((i*iter[1] + 1)-iter[1]):(i*iter[1])] <- rep(nr_layers[i], iter[1])
+}
+
+# fill values in dataframe for creating plots 
+plotdat$y <- cbind(unlist(values))
+
+# dataframe with dimensions: nr of conditions X Länge der Steps 
+plotdat <- as.data.frame(plotdat)
+plotdat$condition <- as.factor(plotdat$condition)
+plotdat$numlayers <- as.factor(plotdat$numlayers)
+```
+
+```{r}
+# sanity check
+# get number of parameters for the networks
+trainable_weights <- lapply(networks, Network_get_num_trainable_weights)
+weight_df <- cbind(numlayers = nr_layers, weights = unlist(trainable_weights))
+weight_df
+
+# We know: 
+# input size: 1 and output size: 4 
+# layer_sizes varies according to number of layers, always 8 cells per layer
+# one layer: 8 cells, two layer: 16 cells, three layer: 24 cells, four layer: 32 cells etc.
+```
+
+```{r}
+# pluck connection with a chance of 0.8
+Network_pluck_connections(networks[[1]], chance = 0.1)
+```
+
+## Visualize results 
+
+Plotting the trainingsset error allows for a comparison between the four different numbers of layers. 
+
+```{r}
+# joint plot of x & y and group = condition 
+
+library(ggplot2)
+plot1 <- ggplot(data=as.data.frame(plotdat), aes(x=x, y=y, colour=numlayers)) +
+  geom_line() +
+  theme_minimal() +
+  ggtitle("Trainingsset Error: 8 cells per layer & wide setup")
+
+plot1
+```
+
+## Recurrent Network in a Long Setup
+
+```{r network}
+# larger number of layers than before - long setup
+nr_layers2 <- c(4,5,6,7)
+
+# initialize lists for second case
+networks2 = list() 
+trainers2 = list()
+values2 = list()
+xs2 = list()
+
+# empty df with as above
+plotdat2 = data.frame(matrix(NA, nrow = iter[1]*length(nr_layers2), ncol = 4))
+colnames(plotdat2) = c("condition", "x", "y")
+plotdat2$x <- rep(seq(1:iter[1]), length(nr_layers2))
+
+for (i in seq_len(NROW(nr_layers2))) {
+  networks2[[i]] = NetworkFactory_createRecurrentWTANetwork(in_size=in_size,
+                                                        hid_type=TANH_NODE,
+                                                        num_layers=nr_layers2[i],
+                                                        layer_sizes=rep(2,nr_layers2[i]),
+                                                        out_size=out_size);
+  # initialize trainers and set learning rate 
+  trainers2[[i]] = ImprovedRPropTrainer(networks2[[i]]);
+  Trainer_learning_rate_set(self = trainers2[[i]], s_learning_rate = 0.0001 )
+  
+  # train the networks 
+  Trainer_train2(trainers2[[i]], seqset, iterations = iter[1])
+  setClass('_p_ImprovedRPropTrainer', contains=c('ExternalReference','_p_Trainer'))
+  Trainer_add_abort_criterion__SWIG_0(self = trainers2[[i]], 
+                                      ConvergenceCriterion(0.01), 
+                                      steps=10)
+  
+  # create dfs to plot training error lateron 
+  xs2[[i]] <- Trainer_error_train_get(trainers2[[i]])
+  # vector of length 500
+	values2[[i]] <- .Call('R_swig_toValue', xs2[[i]], package="bnnlib") 
+	# groups with different conditions  
+	plotdat2$condition[((i*iter[1] + 1)-iter[1]):(i*iter[1])] <-
+	  rep(seq_len(NROW(nr_layers2))[i], iter[1])
+	plotdat2$numlayers[((i*iter[1] + 1)-iter[1]):(i*iter[1])] <- rep(nr_layers2[i], iter[1])
+}
+
+# fill values in dataframe for creating plots 
+plotdat2$y <- cbind(unlist(values2))
+
+# dataframe with dimensions: nr of conditions X Länge der Steps 
+plotdat2 <- as.data.frame(plotdat2)
+plotdat2$condition <- as.factor(plotdat2$condition)
+plotdat2$numlayers <- as.factor(plotdat2$numlayers)
+```
+
+```{r}
+# sanity check
+# get number of parameters for the networks
+trainable_weights2 <- lapply(networks2, Network_get_num_trainable_weights)
+weight_df2 <- cbind(numlayers = nr_layers2, weights = unlist(trainable_weights2))
+weight_df2
+```
+
+## Visualize results 
+
+```{r}
+# joint plot of x & y and group = condition 
+
+library(ggplot2)
+plot2 <- ggplot(data=as.data.frame(plotdat2), aes(x=x, y=y, colour=numlayers)) +
+  geom_line() +
+  theme_minimal() +
+  ggtitle("Trainingsset Error: 2 cells per layer & long setup")
+
+plot2
+```
+
+```{r}
+seq1<-SequenceSet_get(seqset,0)
+plotPredictions(networks[[1]], seq1)
+```
+
+Same on test set
+
+```{r test}
+seq1 <- SequenceSet_get(testset, 0)
+plotPredictions(networks[[1]], seq1)
+```
