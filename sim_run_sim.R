@@ -4,16 +4,16 @@
 args <- commandArgs(trailingOnly = TRUE)
 
 if(!requireNamespace("pacman"))install.packages("pacman")
-pacman::p_load(tictoc, tidyverse, gridExtra, fs, here)
+pacman::p_load(tictoc, tidyverse, gridExtra, fs, here, bnnlib)
 
 conditions <- read_rds(args[[1]])
 
-# setup for bnnlib 
-dyn.load(here("bnnlib", str_c("bnnlib", .Platform$dynlib.ext)))
-source(here("bnnlib", "bnnlib.R"))
-cacheMetaData(1)
-# dir_walk(here("bnnlib", "R"), source)
-source(here("bnnlib", "R", "toSequence.R"))
+# # old setup for bnnlib 
+# dyn.load(here("bnnlib", str_c("bnnlib", .Platform$dynlib.ext)))
+# source(here("bnnlib", "bnnlib.R"))
+# cacheMetaData(1)
+# # dir_walk(here("bnnlib", "R"), source)
+# source(here("bnnlib", "R", "toSequence.R"))
 
 # load functions for simulation 
 source(here("sim_gen_frequencies.R"))
