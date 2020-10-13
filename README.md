@@ -4,6 +4,8 @@ This repository contains R-code for running a simulation study on a Tardis Clust
 
 `bnnlib` is a R-package (under development as of Sept, 2020) by Andreas Brandmaier that allows the flexible creation of different neural network models in R. The above code requires a version of `bnnlib` in the project folder. See how to install `bnnlib` here: https://github.com/brandmaier/bnnlib
 
+Update: `bnnlib` can now be installed and loaded via `install.packages("bnnlib")` and `library(bnnlib)`. 
+
 One of the examples in the `bnnlib` vignettes aims at predicting different frequencies e.g. of some oscillating object (see `frequencies.Rmd` in `bnnlib/vignettes/`). 
 
 This example was extended here to test the influence of different number of layers and different number of cells per layer on training and test errors. 
